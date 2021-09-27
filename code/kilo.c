@@ -21,18 +21,26 @@ void enableRawMode() {
     raw.c_cflag |= CS8;
     raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
 
+    // NOTE(sen) `read` timeout
+    raw.c_cc[VMIN] = 0;
+    raw.c_cc[VTIME] = 1; // NOTE(sen) Tenth of a second
+
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
 int main() {
     enableRawMode();
 
-    char ch;
-    while (read(STDIN_FILENO, &ch, 1) == 1 && ch != 'q') {
+    for (;;) {
+        char ch = '\0';
+        read(STDIN_FILENO, &ch, 1);
         if (iscntrl(ch)) {
             printf("%d\r\n", ch);
         } else {
             printf("%d, ('%c')\r\n", ch, ch);
+        }
+        if (ch == 'q') {
+            break;
         }
     }
 
