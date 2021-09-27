@@ -1,0 +1,39 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "windows": {
+        "type": "process",
+        "command": ".\\build-task.bat"
+      },
+      "linux": {
+        "command": "./build-linux.sh"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "revealProblems": "onProblem",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true,
+        "close": true
+      },
+      "problemMatcher": {
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^([^\\s].*)\\((\\d+)\\)\\s?:\\s(error|warning)(.*)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "message": 4
+        }
+      },
+      "group": { "kind": "build", "isDefault": true }
+    }
+  ]
+}

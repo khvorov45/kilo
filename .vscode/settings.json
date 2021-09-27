@@ -1,0 +1,10 @@
+{
+  "terminal.integrated.profiles.windows": {
+    "cmd": {
+      "path": "C:\\WINDOWS\\System32\\cmd.exe",
+      "args": ["/k", ".\\shell.bat"]
+    }
+  },
+  "C_Cpp.errorSquiggles": "Disabled",
+  "terminal.integrated.defaultProfile.windows": "cmd"
+}
