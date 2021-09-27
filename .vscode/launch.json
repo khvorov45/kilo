@@ -8,19 +8,8 @@
       "name": "Linux launch",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/build/linux_main",
+      "program": "${workspaceFolder}/build/kilo",
       "args": []
-    },
-    {
-      "name": "Windows launch",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/kilo.exe",
-      "args": [],
-      "stopAtEntry": false,
-      "cwd": "${workspaceFolder}",
-      "environment": [],
-      "console": "internalConsole"
     }
   ]
 }
