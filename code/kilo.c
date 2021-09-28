@@ -10,6 +10,8 @@
 struct termios orig_termios;
 
 void die(const char* s) {
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
     perror(s);
     exit(1);
 }
@@ -54,14 +56,24 @@ char editorReadKey() {
 void editorProcessKeyPress() {
     char ch = editorReadKey();
     switch (ch) {
-    case CTRL_KEY('q'): { exit(0); } break;
+    case CTRL_KEY('q'): {
+        write(STDOUT_FILENO, "\x1b[2J", 4);
+        write(STDOUT_FILENO, "\x1b[H", 3);
+        exit(0);
+    } break;
     }
+}
+
+void editorRefreshScreen() {
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
 int main() {
     enableRawMode();
 
     for (;;) {
+        editorRefreshScreen();
         editorProcessKeyPress();
     }
 
