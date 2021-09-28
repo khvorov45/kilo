@@ -42,22 +42,27 @@ void enableRawMode() {
     }
 }
 
+char editorReadKey() {
+    int nread;
+    char ch;
+    while ((nread = read(STDIN_FILENO, &ch, 1)) != 1) {
+        if (nread == -1 && errno != EAGAIN) { die("read"); }
+    }
+    return ch;
+}
+
+void editorProcessKeyPress() {
+    char ch = editorReadKey();
+    switch (ch) {
+    case CTRL_KEY('q'): { exit(0); } break;
+    }
+}
+
 int main() {
     enableRawMode();
 
     for (;;) {
-        char ch = '\0';
-        if (read(STDIN_FILENO, &ch, 1) == -1 && errno != EAGAIN) {
-            die("read");
-        }
-        if (iscntrl(ch)) {
-            printf("%d\r\n", ch);
-        } else {
-            printf("%d, ('%c')\r\n", ch, ch);
-        }
-        if (ch == CTRL_KEY('q')) {
-            break;
-        }
+        editorProcessKeyPress();
     }
 
     return 0;
