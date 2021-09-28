@@ -7,7 +7,11 @@
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
-struct termios orig_termios;
+struct editorConfig {
+    struct termios orig_termios;
+};
+
+struct editorConfig Editor;
 
 void die(const char* s) {
     write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -17,18 +21,18 @@ void die(const char* s) {
 }
 
 void disableRawMode() {
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios)) {
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &Editor.orig_termios)) {
         die("tcsetattr");
     }
 }
 
 void enableRawMode() {
-    if (tcgetattr(STDIN_FILENO, &orig_termios)) {
+    if (tcgetattr(STDIN_FILENO, &Editor.orig_termios)) {
         die("tcgetattr");
     }
     atexit(disableRawMode);
 
-    struct termios raw = orig_termios;
+    struct termios raw = Editor.orig_termios;
 
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     raw.c_oflag &= ~(OPOST);
