@@ -69,7 +69,7 @@ void editorProcessKeyPress() {
 }
 
 void editorDrawRows() {
-    for (int y = 0; y < 24; y++) {
+    for (int row_index = 0; row_index < 24; row_index++) {
         write(STDOUT_FILENO, "~\r\n", 3);
     }
 }
