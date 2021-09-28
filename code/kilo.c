@@ -111,7 +111,10 @@ void editorProcessKeyPress() {
 
 void editorDrawRows() {
     for (int row_index = 0; row_index < Editor.screen_rows; row_index++) {
-        write(STDOUT_FILENO, "~\r\n", 3);
+        write(STDOUT_FILENO, "~", 1);
+        if (row_index < Editor.screen_rows - 1) {
+            write(STDOUT_FILENO, "\r\n", 2);
+        }
     }
 }
 
