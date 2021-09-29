@@ -20,6 +20,7 @@ enum EditorKey {
     Key_PageDown,
     Key_Home,
     Key_End,
+    Key_Delete,
 };
 
 struct EditorConfig {
@@ -98,6 +99,7 @@ int editorReadKey() {
                 case '6': if (seq[2] == '~') { result = Key_PageDown; } break;
                 case '1': case '7': if (seq[2] == '~') { result = Key_Home; } break;
                 case '4': case '8': if (seq[2] == '~') { result = Key_End; } break;
+                case '3': if (seq[2] == '~') { result = Key_Delete; } break;
                 }
             }
         }
