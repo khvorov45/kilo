@@ -7,6 +7,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#define KILO_VERSION "0.0.1"
+
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 struct editorConfig {
@@ -131,10 +133,19 @@ void editorProcessKeyPress() {
 }
 
 void editorDrawRows(struct AppendBuffer* ab) {
-    for (int row_index = 0; row_index < Editor.screen_rows; row_index++) {
-        abAppend(ab, "~", 1);
-        abAppend(ab, "\x1b[K", 3); // NOTE(sen) Clear row
-        if (row_index < Editor.screen_rows - 1) {
+    for (int rowIndex = 0; rowIndex < Editor.screen_rows; rowIndex++) {
+        if (rowIndex == Editor.screen_rows / 3) {
+            char welcome[80];
+            int welcomeLen = snprintf(welcome, sizeof(welcome), "Kilo editor -- version %s", KILO_VERSION);
+            if (welcomeLen > Editor.screen_cols) {
+                welcomeLen = Editor.screen_cols;
+            }
+            abAppend(ab, welcome, welcomeLen);
+        } else {
+            abAppend(ab, "~", 1);
+        }
+        abAppend(ab, "\x1b[K", 3); // NOTE(sen) Clear row after the cursor
+        if (rowIndex < Editor.screen_rows - 1) {
             abAppend(ab, "\r\n", 2);
         }
     }
