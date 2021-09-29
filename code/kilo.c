@@ -18,6 +18,8 @@ enum EditorKey {
     Key_ArrowDown,
     Key_PageUp,
     Key_PageDown,
+    Key_Home,
+    Key_End,
 };
 
 struct EditorConfig {
@@ -84,8 +86,18 @@ int editorReadKey() {
                 case 'B': result = Key_ArrowDown; break;
                 case 'C': result = Key_ArrowRight; break;
                 case 'D': result = Key_ArrowLeft; break;
+                case 'H': result = Key_Home; break;
+                case 'F': result = Key_End; break;
+                case 'O': {
+                    switch (seq[2]) {
+                    case 'H': result = Key_Home; break;
+                    case 'F': result = Key_End; break;
+                    }
+                } break;
                 case '5': if (seq[2] == '~') { result = Key_PageUp; } break;
                 case '6': if (seq[2] == '~') { result = Key_PageDown; } break;
+                case '1': case '7': if (seq[2] == '~') { result = Key_Home; } break;
+                case '4': case '8': if (seq[2] == '~') { result = Key_End; } break;
                 }
             }
         }
@@ -173,6 +185,8 @@ void editorProcessKeyPress() {
         int times = Editor.screenRows;
         while (times--) { editorMoveCursor(ch == Key_PageUp ? Key_ArrowUp : Key_ArrowDown); }
     } break;
+    case Key_Home: Editor.cursorX = 0; break;
+    case Key_End: Editor.cursorX = Editor.screenCols - 1; break;
     }
 }
 
