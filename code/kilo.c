@@ -63,6 +63,21 @@ char editorReadKey() {
     while ((nread = read(STDIN_FILENO, &ch, 1)) != 1) {
         if (nread == -1 && errno != EAGAIN) { die("read"); }
     }
+
+    if (ch == '\x1b') {
+        char seq[3];
+        if (read(STDIN_FILENO, &seq[0], 2) == 2) {
+            if (seq[0] == '[') {
+                switch (seq[1]) {
+                case 'A': ch = 'w'; break;
+                case 'B': ch = 's'; break;
+                case 'C': ch = 'd'; break;
+                case 'D': ch = 'a'; break;
+                }
+            }
+        }
+    }
+
     return ch;
 }
 
