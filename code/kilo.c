@@ -149,10 +149,10 @@ void abFree(struct AppendBuffer* ab) {
 
 void editorMoveCursor(int key) {
     switch (key) {
-    case Key_ArrowLeft: Editor.cursorX--; break;
-    case Key_ArrowRight: Editor.cursorX++; break;
-    case Key_ArrowUp: Editor.cursorY--; break;
-    case Key_ArrowDown: Editor.cursorY++; break;
+    case Key_ArrowLeft: if (Editor.cursorX != 0) { Editor.cursorX--; } break;
+    case Key_ArrowRight: if (Editor.cursorX != Editor.screenCols - 1) { Editor.cursorX++; } break;
+    case Key_ArrowUp: if (Editor.cursorY != 0) { Editor.cursorY--; } break;
+    case Key_ArrowDown: if (Editor.cursorY != Editor.screenRows - 1) { Editor.cursorY++; } break;
     }
 }
 
