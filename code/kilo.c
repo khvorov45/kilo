@@ -140,6 +140,12 @@ void editorDrawRows(struct AppendBuffer* ab) {
             if (welcomeLen > Editor.screenCols) {
                 welcomeLen = Editor.screenCols;
             }
+            int padding = (Editor.screenCols - welcomeLen) / 2;
+            if (padding) {
+                abAppend(ab, "~", 1);
+                padding--;
+            }
+            while (padding--) { abAppend(ab, " ", 1); };
             abAppend(ab, welcome, welcomeLen);
         } else {
             abAppend(ab, "~", 1);
