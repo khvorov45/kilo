@@ -11,6 +11,13 @@
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
+enum EditorKey {
+    Key_ArrowLeft = 1000,
+    Key_ArrowRight,
+    Key_ArrowUp,
+    Key_ArrowDown,
+};
+
 struct EditorConfig {
     int cursorX;
     int cursorY;
@@ -57,28 +64,30 @@ void enableRawMode() {
     }
 }
 
-char editorReadKey() {
+int editorReadKey() {
     int nread;
     char ch;
     while ((nread = read(STDIN_FILENO, &ch, 1)) != 1) {
         if (nread == -1 && errno != EAGAIN) { die("read"); }
     }
 
+    int result = ch;
+
     if (ch == '\x1b') {
         char seq[3];
         if (read(STDIN_FILENO, &seq[0], 2) == 2) {
             if (seq[0] == '[') {
                 switch (seq[1]) {
-                case 'A': ch = 'w'; break;
-                case 'B': ch = 's'; break;
-                case 'C': ch = 'd'; break;
-                case 'D': ch = 'a'; break;
+                case 'A': result = Key_ArrowUp; break;
+                case 'B': result = Key_ArrowDown; break;
+                case 'C': result = Key_ArrowRight; break;
+                case 'D': result = Key_ArrowLeft; break;
                 }
             }
         }
     }
 
-    return ch;
+    return result;
 }
 
 int getCursorPosition(int* rows, int* cols) {
@@ -138,24 +147,24 @@ void abFree(struct AppendBuffer* ab) {
     free(ab->buf);
 }
 
-void editorMoveCursor(char key) {
+void editorMoveCursor(int key) {
     switch (key) {
-    case 'a': Editor.cursorX--; break;
-    case 'd': Editor.cursorX++; break;
-    case 'w': Editor.cursorY--; break;
-    case 's': Editor.cursorY++; break;
+    case Key_ArrowLeft: Editor.cursorX--; break;
+    case Key_ArrowRight: Editor.cursorX++; break;
+    case Key_ArrowUp: Editor.cursorY--; break;
+    case Key_ArrowDown: Editor.cursorY++; break;
     }
 }
 
 void editorProcessKeyPress() {
-    char ch = editorReadKey();
+    int ch = editorReadKey();
     switch (ch) {
     case CTRL_KEY('q'): {
         write(STDOUT_FILENO, "\x1b[2J", 4); // NOTE(sen) Clear screen
         write(STDOUT_FILENO, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
         exit(0);
     } break;
-    case 'a': case 'd': case 'w': case 's': editorMoveCursor(ch); break;
+    case Key_ArrowUp: case Key_ArrowDown: case Key_ArrowLeft: case Key_ArrowRight: editorMoveCursor(ch); break;
     }
 }
 
