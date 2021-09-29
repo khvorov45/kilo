@@ -142,12 +142,15 @@ void editorDrawRows(struct AppendBuffer* ab) {
 void editorRefreshScreen() {
     struct AppendBuffer ab = APPEND_BUFFER_INIT;
 
-    abAppend(&ab, "\x1b[2J", 4);
-    abAppend(&ab, "\x1b[H", 3);
+    abAppend(&ab, "\x1b[?25l", 6); // NOTE(sen) Hide cursor
+
+    abAppend(&ab, "\x1b[2J", 4); // NOTE(sen) Clear
+    abAppend(&ab, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
 
     editorDrawRows(&ab);
 
-    abAppend(&ab, "\x1b[H", 3);
+    abAppend(&ab, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
+    abAppend(&ab, "\x1b[?25h", 6); // NOTE(sen) Show cursor
 
     write(STDOUT_FILENO, ab.buf, ab.len);
 
