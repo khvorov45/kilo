@@ -12,6 +12,8 @@
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 struct EditorConfig {
+    int cursorX;
+    int cursorY;
     int screenRows;
     int screenCols;
     struct termios origTermios;
@@ -121,14 +123,24 @@ void abFree(struct AppendBuffer* ab) {
     free(ab->buf);
 }
 
+void editorMoveCursor(char key) {
+    switch (key) {
+    case 'a': Editor.cursorX--; break;
+    case 'd': Editor.cursorX++; break;
+    case 'w': Editor.cursorY--; break;
+    case 's': Editor.cursorY++; break;
+    }
+}
+
 void editorProcessKeyPress() {
     char ch = editorReadKey();
     switch (ch) {
     case CTRL_KEY('q'): {
-        write(STDOUT_FILENO, "\x1b[2J", 4);
-        write(STDOUT_FILENO, "\x1b[H", 3);
+        write(STDOUT_FILENO, "\x1b[2J", 4); // NOTE(sen) Clear screen
+        write(STDOUT_FILENO, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
         exit(0);
     } break;
+    case 'a': case 'd': case 'w': case 's': editorMoveCursor(ch); break;
     }
 }
 
@@ -166,7 +178,11 @@ void editorRefreshScreen() {
 
     editorDrawRows(&ab);
 
-    abAppend(&ab, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
+    // NOTE(sen) Move cursor to the appropriate position
+    char buf[32];
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", Editor.cursorY + 1, Editor.cursorX + 1);
+    abAppend(&ab, buf, strlen(buf));
+
     abAppend(&ab, "\x1b[?25h", 6); // NOTE(sen) Show cursor
 
     write(STDOUT_FILENO, ab.buf, ab.len);
@@ -175,6 +191,8 @@ void editorRefreshScreen() {
 }
 
 void initEditor() {
+    Editor.cursorX = 10;
+    Editor.cursorY = 0;
     if (getWindowSize(&Editor.screenRows, &Editor.screenCols) == -1) {
         die("getWindowSize");
     }
