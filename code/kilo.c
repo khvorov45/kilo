@@ -11,13 +11,13 @@
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
-struct editorConfig {
-    int screen_rows;
-    int screen_cols;
+struct EditorConfig {
+    int screenRows;
+    int screenCols;
     struct termios orig_termios;
 };
 
-struct editorConfig Editor;
+struct EditorConfig Editor;
 
 void die(const char* s) {
     write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -133,19 +133,19 @@ void editorProcessKeyPress() {
 }
 
 void editorDrawRows(struct AppendBuffer* ab) {
-    for (int rowIndex = 0; rowIndex < Editor.screen_rows; rowIndex++) {
-        if (rowIndex == Editor.screen_rows / 3) {
+    for (int rowIndex = 0; rowIndex < Editor.screenRows; rowIndex++) {
+        if (rowIndex == Editor.screenRows / 3) {
             char welcome[80];
             int welcomeLen = snprintf(welcome, sizeof(welcome), "Kilo editor -- version %s", KILO_VERSION);
-            if (welcomeLen > Editor.screen_cols) {
-                welcomeLen = Editor.screen_cols;
+            if (welcomeLen > Editor.screenCols) {
+                welcomeLen = Editor.screenCols;
             }
             abAppend(ab, welcome, welcomeLen);
         } else {
             abAppend(ab, "~", 1);
         }
         abAppend(ab, "\x1b[K", 3); // NOTE(sen) Clear row after the cursor
-        if (rowIndex < Editor.screen_rows - 1) {
+        if (rowIndex < Editor.screenRows - 1) {
             abAppend(ab, "\r\n", 2);
         }
     }
@@ -169,7 +169,7 @@ void editorRefreshScreen() {
 }
 
 void initEditor() {
-    if (getWindowSize(&Editor.screen_rows, &Editor.screen_cols) == -1) {
+    if (getWindowSize(&Editor.screenRows, &Editor.screenCols) == -1) {
         die("getWindowSize");
     }
 }
