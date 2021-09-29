@@ -133,6 +133,7 @@ void editorProcessKeyPress() {
 void editorDrawRows(struct AppendBuffer* ab) {
     for (int row_index = 0; row_index < Editor.screen_rows; row_index++) {
         abAppend(ab, "~", 1);
+        abAppend(ab, "\x1b[K", 3); // NOTE(sen) Clear row
         if (row_index < Editor.screen_rows - 1) {
             abAppend(ab, "\r\n", 2);
         }
@@ -144,7 +145,6 @@ void editorRefreshScreen() {
 
     abAppend(&ab, "\x1b[?25l", 6); // NOTE(sen) Hide cursor
 
-    abAppend(&ab, "\x1b[2J", 4); // NOTE(sen) Clear
     abAppend(&ab, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
 
     editorDrawRows(&ab);
