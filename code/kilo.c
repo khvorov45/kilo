@@ -14,7 +14,7 @@
 struct EditorConfig {
     int screenRows;
     int screenCols;
-    struct termios orig_termios;
+    struct termios origTermios;
 };
 
 struct EditorConfig Editor;
@@ -28,18 +28,18 @@ void die(const char* s) {
 }
 
 void disableRawMode() {
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &Editor.orig_termios)) {
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &Editor.origTermios)) {
         die("tcsetattr");
     }
 }
 
 void enableRawMode() {
-    if (tcgetattr(STDIN_FILENO, &Editor.orig_termios)) {
+    if (tcgetattr(STDIN_FILENO, &Editor.origTermios)) {
         die("tcgetattr");
     }
     atexit(disableRawMode);
 
-    struct termios raw = Editor.orig_termios;
+    struct termios raw = Editor.origTermios;
 
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     raw.c_oflag &= ~(OPOST);
