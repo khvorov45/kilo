@@ -92,10 +92,16 @@ abReset(AppendBuffer* ab) {
 
 function void
 editorMoveCursor(EditorState* state, i32 key) {
-    Row* row = state->cursorY < state->nRows ? state->rows + state->cursorY : 0;
     switch (key) {
     case Key_ArrowLeft: if (state->cursorX > 0) { state->cursorX--; } break;
-    case Key_ArrowRight: if (row && state->cursorX < row->size) { state->cursorX++; } break;
+    case Key_ArrowRight: {
+        if (state->cursorY < state->nRows) {
+            Row* row = state->rows + state->cursorY;
+            if (state->cursorX < row->size) {
+                state->cursorX++;
+            }
+        }
+    } break;
     case Key_ArrowUp: if (state->cursorY > 0) { state->cursorY--; } break;
     case Key_ArrowDown: if (state->cursorY < state->nRows) { state->cursorY++; } break;
     }
