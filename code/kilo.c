@@ -21,12 +21,19 @@ typedef int32_t b32;
 
 global char* KILO_VERSION = "0.0.1";
 
+global struct termios OG_TERMINAL_SETTINGS;
+
 typedef struct EditorState {
     int cursorX;
     int cursorY;
     int screenRows;
     int screenCols;
 } EditorState;
+
+typedef struct AppendBuffer {
+    char* buf;
+    int len;
+} AppendBuffer;
 
 enum EditorKey {
     Key_ArrowLeft = 1000,
@@ -48,11 +55,6 @@ die(char* message) {
     printf("\r");
     exit(1);
 }
-
-typedef struct AppendBuffer {
-    char* buf;
-    int len;
-} AppendBuffer;
 
 function void
 abAppend(AppendBuffer* ab, char* string, int len) {
@@ -79,8 +81,6 @@ editorMoveCursor(EditorState* state, int key) {
     case Key_ArrowDown: if (state->cursorY != state->screenRows - 1) { state->cursorY++; } break;
     }
 }
-
-struct termios OG_TERMINAL_SETTINGS;
 
 function void
 restoreOriginalTerminalSettings() {
