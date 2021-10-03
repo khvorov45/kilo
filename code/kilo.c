@@ -43,6 +43,7 @@ typedef struct EditorState {
     i32 screenRows;
     i32 screenCols;
     i32 rowOffset;
+    i32 colOffset;
     i32 nRows;
     Row* rows;
 } EditorState;
@@ -93,7 +94,7 @@ function void
 editorMoveCursor(EditorState* state, i32 key) {
     switch (key) {
     case Key_ArrowLeft: if (state->cursorX != 0) { state->cursorX--; } break;
-    case Key_ArrowRight: if (state->cursorX != state->screenCols - 1) { state->cursorX++; } break;
+    case Key_ArrowRight: { state->cursorX++; } break;
     case Key_ArrowUp: if (state->cursorY != 0) { state->cursorY--; } break;
     case Key_ArrowDown: if (state->cursorY != (state->nRows - 1) + (state->screenRows - 1)) { state->cursorY++; } break;
     }
@@ -198,12 +199,21 @@ main(i32 argc, char* argv[]) {
     for (;;) {
         // NOTE(sen) Scroll
         {
+            // NOTE(sen) Vertical
             assert(state.cursorY >= 0);
             assert(state.rowOffset >= 0);
             if (state.cursorY < state.rowOffset) {
                 state.rowOffset = state.cursorY;
             } else if (state.cursorY >= state.rowOffset + state.screenRows) {
                 state.rowOffset = state.cursorY - state.screenRows + 1;
+            }
+            // NOTE(sen) Horizontal
+            assert(state.cursorX >= 0);
+            assert(state.colOffset >= 0);
+            if (state.cursorX < state.colOffset) {
+                state.colOffset = state.cursorX;
+            } else if (state.cursorX >= state.colOffset + state.screenCols) {
+                state.colOffset = state.cursorX - state.screenCols + 1;
             }
         }
 
@@ -218,11 +228,13 @@ main(i32 argc, char* argv[]) {
                 if (fileRowIndex < state.nRows) {
                     // NOTE(sen) Print file rows
                     Row* row = state.rows + fileRowIndex;
-                    i32 len = row->size;
-                    if (len > state.screenCols) {
-                        len = state.screenCols;
+                    if (row->size > state.colOffset) {
+                        i32 len = row->size - state.colOffset;
+                        if (len > state.screenCols) {
+                            len = state.screenCols;
+                        }
+                        abAppend(&appendBuffer, row->chars + state.colOffset, len);
                     }
-                    abAppend(&appendBuffer, row->chars, len);
                 } else if (rowIndex == state.screenRows / 3 && state.nRows == 0) {
                     // NOTE(sen) Welcome message
                     char welcome[80];
@@ -250,7 +262,7 @@ main(i32 argc, char* argv[]) {
 
             // NOTE(sen) Move cursor to the appropriate position
             char buf[32];
-            snprintf(buf, sizeof(buf), "\x1b[%d;%dH", state.cursorY - state.rowOffset + 1, state.cursorX + 1);
+            snprintf(buf, sizeof(buf), "\x1b[%d;%dH", state.cursorY - state.rowOffset + 1, state.cursorX - state.colOffset + 1);
             abAppend(&appendBuffer, buf, strlen(buf));
 
             abAppend(&appendBuffer, "\x1b[?25h", 6); // NOTE(sen) Show cursor
