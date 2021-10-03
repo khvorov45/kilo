@@ -41,7 +41,7 @@ typedef struct EditorState {
     i32 screenRows;
     i32 screenCols;
     i32 nRows;
-    Row row;
+    Row* rows;
 } EditorState;
 
 typedef struct AppendBuffer {
@@ -166,23 +166,25 @@ main(i32 argc, char* argv[]) {
         }
     }
 
-    // NOTE(sen) Read a line from a file
+    // NOTE(sen) Read file
     if (argc > 1) {
         FILE* file = fopen(argv[1], "r");
         if (!file) { die("fopen"); }
         char* line = 0;
         usize linecap = 0;
-        isize linelen = getline(&line, &linecap, file);
-        if (linelen != -1) {
+        i32 linelen;
+        while ((linelen = getline(&line, &linecap, file)) != -1) {
             // NOTE(sen) Trim the final newline
             while (linelen > 0 && (line[linelen - 1] == '\n' || line[linelen - 1] == '\r')) {
                 --linelen;
             }
-            state.row.size = linelen;
-            state.row.chars = malloc(linelen + 1);
-            memcpy(state.row.chars, line, linelen);
-            state.row.chars[linelen] = '\0';
-            state.nRows = 1;
+            i32 rowIndex = state.nRows++;
+            state.rows = realloc(state.rows, state.nRows * sizeof(Row));
+            Row* row = state.rows + rowIndex;
+            row->size = linelen;
+            row->chars = malloc(linelen + 1);
+            memcpy(row->chars, line, linelen);
+            row->chars[linelen] = '\0';
         }
         free(line);
         fclose(file);
@@ -201,11 +203,12 @@ main(i32 argc, char* argv[]) {
 
                 if (rowIndex < state.nRows) {
                     // NOTE(sen) Print the row that we have
-                    i32 len = state.row.size;
-                    if (len > state.screenRows) {
-                        len = state.screenRows;
+                    Row* row = state.rows + rowIndex;
+                    i32 len = row->size;
+                    if (len > state.screenCols) {
+                        len = state.screenCols;
                     }
-                    abAppend(&appendBuffer, state.row.chars, len);
+                    abAppend(&appendBuffer, row->chars, len);
                 } else if (rowIndex == state.screenRows / 3 && state.nRows == 0) {
                     // NOTE(sen) Welcome message
                     char welcome[80];
