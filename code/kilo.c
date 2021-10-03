@@ -92,11 +92,12 @@ abReset(AppendBuffer* ab) {
 
 function void
 editorMoveCursor(EditorState* state, i32 key) {
+    Row* row = state->cursorY < state->nRows ? state->rows + state->cursorY : 0;
     switch (key) {
-    case Key_ArrowLeft: if (state->cursorX != 0) { state->cursorX--; } break;
-    case Key_ArrowRight: { state->cursorX++; } break;
-    case Key_ArrowUp: if (state->cursorY != 0) { state->cursorY--; } break;
-    case Key_ArrowDown: if (state->cursorY != state->nRows - 1) { state->cursorY++; } break;
+    case Key_ArrowLeft: if (state->cursorX > 0) { state->cursorX--; } break;
+    case Key_ArrowRight: if (row && state->cursorX < row->size) { state->cursorX++; } break;
+    case Key_ArrowUp: if (state->cursorY > 0) { state->cursorY--; } break;
+    case Key_ArrowDown: if (state->cursorY < state->nRows) { state->cursorY++; } break;
     }
 }
 
@@ -321,15 +322,28 @@ main(i32 argc, char* argv[]) {
                 exit(0);
             } break;
             case Key_ArrowUp: case Key_ArrowDown: case Key_ArrowLeft: case Key_ArrowRight: editorMoveCursor(&state, key); break;
-            case Key_PageUp: case Key_PageDown: {
-                i32 times = state.screenRows;
-                while (times--) { editorMoveCursor(&state, key == Key_PageUp ? Key_ArrowUp : Key_ArrowDown); }
+            case Key_PageUp: case Key_PageDown: case Key_Home: case Key_End: {
+                i32 arrow;
+                switch (key) {
+                case Key_PageUp: arrow = Key_ArrowUp; break;
+                case Key_PageDown: arrow = Key_ArrowDown; break;
+                case Key_Home: arrow = Key_ArrowLeft; break;
+                case Key_End: arrow = Key_ArrowRight; break;
+                }
+                i32 times = 0;
+                switch (key) {
+                case Key_PageUp: case Key_PageDown: times = state.screenRows; break;
+                case Key_Home: case Key_End: {
+                    if (state.cursorY < state.nRows) {
+                        Row* row = state.rows + state.cursorY;
+                        times = row->size;
+                    }
+                } break;
+                }
+                while (times--) { editorMoveCursor(&state, arrow); }
             } break;
-            case Key_Home: state.cursorX = 0; break;
-            case Key_End: state.cursorX = state.screenCols - 1; break;
             }
         }
     }
-
     return 0;
 }
