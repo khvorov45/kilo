@@ -24,6 +24,8 @@ typedef size_t usize;
 #define function static
 #define global static
 
+#define assert(condition) if (!(condition)) __builtin_trap()
+
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 global char* KILO_VERSION = "0.0.1";
@@ -40,6 +42,7 @@ typedef struct EditorState {
     i32 cursorY;
     i32 screenRows;
     i32 screenCols;
+    i32 rowOffset;
     i32 nRows;
     Row* rows;
 } EditorState;
@@ -92,7 +95,7 @@ editorMoveCursor(EditorState* state, i32 key) {
     case Key_ArrowLeft: if (state->cursorX != 0) { state->cursorX--; } break;
     case Key_ArrowRight: if (state->cursorX != state->screenCols - 1) { state->cursorX++; } break;
     case Key_ArrowUp: if (state->cursorY != 0) { state->cursorY--; } break;
-    case Key_ArrowDown: if (state->cursorY != state->screenRows - 1) { state->cursorY++; } break;
+    case Key_ArrowDown: if (state->cursorY != (state->nRows - 1) + (state->screenRows - 1)) { state->cursorY++; } break;
     }
 }
 
@@ -193,6 +196,17 @@ main(i32 argc, char* argv[]) {
     struct AppendBuffer appendBuffer = {};
 
     for (;;) {
+        // NOTE(sen) Scroll
+        {
+            assert(state.cursorY >= 0);
+            assert(state.rowOffset >= 0);
+            if (state.cursorY < state.rowOffset) {
+                state.rowOffset = state.cursorY;
+            } else if (state.cursorY >= state.rowOffset + state.screenRows) {
+                state.rowOffset = state.cursorY - state.screenRows + 1;
+            }
+        }
+
         // NOTE(sen) Refresh screen
         {
             abAppend(&appendBuffer, "\x1b[?25l", 6); // NOTE(sen) Hide cursor
@@ -200,10 +214,10 @@ main(i32 argc, char* argv[]) {
 
             // NOTE(sen) Draw rows
             for (int rowIndex = 0; rowIndex < state.screenRows; rowIndex++) {
-
-                if (rowIndex < state.nRows) {
-                    // NOTE(sen) Print the row that we have
-                    Row* row = state.rows + rowIndex;
+                i32 fileRowIndex = rowIndex + state.rowOffset;
+                if (fileRowIndex < state.nRows) {
+                    // NOTE(sen) Print file rows
+                    Row* row = state.rows + fileRowIndex;
                     i32 len = row->size;
                     if (len > state.screenCols) {
                         len = state.screenCols;
@@ -223,9 +237,6 @@ main(i32 argc, char* argv[]) {
                     }
                     while (padding--) { abAppend(&appendBuffer, " ", 1); };
                     abAppend(&appendBuffer, welcome, welcomeLen);
-                } else {
-                    // NOTE(sen) Empty row
-                    abAppend(&appendBuffer, "~", 1);
                 }
 
                 // NOTE(sen) Clear row after the cursor
@@ -239,7 +250,7 @@ main(i32 argc, char* argv[]) {
 
             // NOTE(sen) Move cursor to the appropriate position
             char buf[32];
-            snprintf(buf, sizeof(buf), "\x1b[%d;%dH", state.cursorY + 1, state.cursorX + 1);
+            snprintf(buf, sizeof(buf), "\x1b[%d;%dH", state.cursorY - state.rowOffset + 1, state.cursorX + 1);
             abAppend(&appendBuffer, buf, strlen(buf));
 
             abAppend(&appendBuffer, "\x1b[?25h", 6); // NOTE(sen) Show cursor
