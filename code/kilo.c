@@ -96,7 +96,7 @@ editorMoveCursor(EditorState* state, i32 key) {
     case Key_ArrowLeft: if (state->cursorX != 0) { state->cursorX--; } break;
     case Key_ArrowRight: { state->cursorX++; } break;
     case Key_ArrowUp: if (state->cursorY != 0) { state->cursorY--; } break;
-    case Key_ArrowDown: if (state->cursorY != (state->nRows - 1) + (state->screenRows - 1)) { state->cursorY++; } break;
+    case Key_ArrowDown: if (state->cursorY != state->nRows - 1) { state->cursorY++; } break;
     }
 }
 
