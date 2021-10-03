@@ -1,3 +1,8 @@
+// https://www.gnu.org/software/libc/manual/html_node/Feature-Test-Macros.html
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -13,6 +18,8 @@ typedef int64_t i64;
 typedef uint64_t u32;
 typedef uint64_t u64;
 typedef int32_t b32;
+typedef ssize_t isize;
+typedef size_t usize;
 
 #define function static
 #define global static
@@ -23,16 +30,23 @@ global char* KILO_VERSION = "0.0.1";
 
 global struct termios OG_TERMINAL_SETTINGS;
 
+typedef struct Row {
+    i32 size;
+    char* chars;
+} Row;
+
 typedef struct EditorState {
-    int cursorX;
-    int cursorY;
-    int screenRows;
-    int screenCols;
+    i32 cursorX;
+    i32 cursorY;
+    i32 screenRows;
+    i32 screenCols;
+    i32 nRows;
+    Row row;
 } EditorState;
 
 typedef struct AppendBuffer {
     char* buf;
-    int len;
+    i32 len;
 } AppendBuffer;
 
 enum EditorKey {
@@ -57,7 +71,7 @@ die(char* message) {
 }
 
 function void
-abAppend(AppendBuffer* ab, char* string, int len) {
+abAppend(AppendBuffer* ab, char* string, i32 len) {
     char* new = realloc(ab->buf, ab->len + len);
     if (new) {
         memcpy(&new[ab->len], string, len);
@@ -73,7 +87,7 @@ abReset(AppendBuffer* ab) {
 }
 
 function void
-editorMoveCursor(EditorState* state, int key) {
+editorMoveCursor(EditorState* state, i32 key) {
     switch (key) {
     case Key_ArrowLeft: if (state->cursorX != 0) { state->cursorX--; } break;
     case Key_ArrowRight: if (state->cursorX != state->screenCols - 1) { state->cursorX++; } break;
@@ -89,8 +103,8 @@ restoreOriginalTerminalSettings() {
     }
 }
 
-int
-main() {
+i32
+main(i32 argc, char* argv[]) {
     // NOTE(sen) Save the original settings
     if (tcgetattr(STDIN_FILENO, &OG_TERMINAL_SETTINGS)) {
         die("tcgetattr");
@@ -152,6 +166,28 @@ main() {
         }
     }
 
+    // NOTE(sen) Read a line from a file
+    if (argc > 1) {
+        FILE* file = fopen(argv[1], "r");
+        if (!file) { die("fopen"); }
+        char* line = 0;
+        usize linecap = 0;
+        isize linelen = getline(&line, &linecap, file);
+        if (linelen != -1) {
+            // NOTE(sen) Trim the final newline
+            while (linelen > 0 && (line[linelen - 1] == '\n' || line[linelen - 1] == '\r')) {
+                --linelen;
+            }
+            state.row.size = linelen;
+            state.row.chars = malloc(linelen + 1);
+            memcpy(state.row.chars, line, linelen);
+            state.row.chars[linelen] = '\0';
+            state.nRows = 1;
+        }
+        free(line);
+        fclose(file);
+    }
+
     struct AppendBuffer appendBuffer = {};
 
     for (;;) {
@@ -162,7 +198,16 @@ main() {
 
             // NOTE(sen) Draw rows
             for (int rowIndex = 0; rowIndex < state.screenRows; rowIndex++) {
-                if (rowIndex == state.screenRows / 3) {
+
+                if (rowIndex < state.nRows) {
+                    // NOTE(sen) Print the row that we have
+                    i32 len = state.row.size;
+                    if (len > state.screenRows) {
+                        len = state.screenRows;
+                    }
+                    abAppend(&appendBuffer, state.row.chars, len);
+                } else if (rowIndex == state.screenRows / 3 && state.nRows == 0) {
+                    // NOTE(sen) Welcome message
                     char welcome[80];
                     int welcomeLen = snprintf(welcome, sizeof(welcome), "Kilo editor -- version %s", KILO_VERSION);
                     if (welcomeLen > state.screenCols) {
@@ -176,9 +221,14 @@ main() {
                     while (padding--) { abAppend(&appendBuffer, " ", 1); };
                     abAppend(&appendBuffer, welcome, welcomeLen);
                 } else {
+                    // NOTE(sen) Empty row
                     abAppend(&appendBuffer, "~", 1);
                 }
-                abAppend(&appendBuffer, "\x1b[K", 3); // NOTE(sen) Clear row after the cursor
+
+                // NOTE(sen) Clear row after the cursor
+                abAppend(&appendBuffer, "\x1b[K", 3);
+
+                // NOTE(sen) Make sure there is no newline on the last line
                 if (rowIndex < state.screenRows - 1) {
                     abAppend(&appendBuffer, "\r\n", 2);
                 }
@@ -199,9 +249,9 @@ main() {
         // NOTE(sen) Process key press
         {
             // NOTE(sen) Read the first character input
-            int key = 0;
+            i32 key = 0;
             {
-                int nread;
+                i32 nread;
                 char ch;
                 while ((nread = read(STDIN_FILENO, &ch, 1)) != 1) {
                     if (nread == -1 && errno != EAGAIN) { die("read"); }
@@ -246,7 +296,7 @@ main() {
             } break;
             case Key_ArrowUp: case Key_ArrowDown: case Key_ArrowLeft: case Key_ArrowRight: editorMoveCursor(&state, key); break;
             case Key_PageUp: case Key_PageDown: {
-                int times = state.screenRows;
+                i32 times = state.screenRows;
                 while (times--) { editorMoveCursor(&state, key == Key_PageUp ? Key_ArrowUp : Key_ArrowDown); }
             } break;
             case Key_Home: state.cursorX = 0; break;
