@@ -101,31 +101,6 @@ i32 clamp(i32 value, i32 min, i32 max) {
 }
 
 function void
-editorMoveCursor(EditorState* state, i32 horizontal, i32 vertical) {
-
-    i32 newX = state->cursorX + horizontal;
-    i32 newY = state->cursorY + vertical;
-
-    i32 minX = 0;
-    i32 maxX = 0;
-
-    i32 minY = 0;
-    i32 maxY = state->nRows;
-
-    newY = clamp(newY, minY, maxY);
-
-    if (newY < state->nRows) {
-        Row* row = state->rows + newY;
-        maxX = row->size;
-    }
-
-    newX = clamp(newX, minX, maxX);
-
-    state->cursorX = newX;
-    state->cursorY = newY;
-}
-
-function void
 restoreOriginalTerminalSettings() {
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &OG_TERMINAL_SETTINGS)) {
         die("tcsetattr");
@@ -350,22 +325,59 @@ main(i32 argc, char* argv[]) {
         } break;
 
             // NOTE(sen) Cursor move
-        case Key_ArrowDown: editorMoveCursor(&state, 0, 1); break;
-        case Key_ArrowUp: editorMoveCursor(&state, 0, -1); break;
-        case Key_ArrowRight: editorMoveCursor(&state, 1, 0); break;
-        case Key_ArrowLeft: editorMoveCursor(&state, -1, 0); break;
-        case Key_PageDown: editorMoveCursor(&state, 0, state.screenRows); break;
-        case Key_PageUp: editorMoveCursor(&state, 0, -state.screenRows); break;
-        case Key_Home: case Key_End: {
-            i32 times = 0;
+        case Key_ArrowDown: {
             if (state.cursorY < state.nRows) {
-                Row* row = state.rows + state.cursorY;
-                times = row->size;
+                state.cursorY++;
+                if (state.cursorY == state.nRows) {
+                    state.cursorX = 0;
+                } else {
+                    state.cursorX = clamp(state.cursorX, 0, state.rows[state.cursorY].size);
+                }
             }
-            switch (key) {
-            case Key_End: editorMoveCursor(&state, times, 0); break;
-            case Key_Home: editorMoveCursor(&state, -times, 0); break;
+        }; break;
+        case Key_ArrowUp: {
+            if (state.cursorY > 0) {
+                state.cursorY--;
+                state.cursorX = clamp(state.cursorX, 0, state.rows[state.cursorY].size);
             }
+        }; break;
+        case Key_ArrowRight: {
+            if (state.cursorY < state.nRows) {
+                if (state.cursorX == state.rows[state.cursorY].size) {
+                    state.cursorX = 0;
+                    state.cursorY++;
+                } else {
+                    state.cursorX++;
+                }
+            }
+        }; break;
+        case Key_ArrowLeft: {
+            if (state.cursorX == 0) {
+                if (state.cursorY > 0) {
+                    state.cursorY--;
+                    state.cursorX = state.rows[state.cursorY].size;
+                }
+            } else {
+                state.cursorX--;
+            }
+        }; break;
+        case Key_PageDown: {
+            i32 newY = state.cursorY + state.screenRows;
+            state.cursorY = clamp(newY, 0, state.nRows);
+            state.cursorX = clamp(state.cursorX, 0, state.rows[state.cursorY].size);
+        }; break;
+        case Key_PageUp: {
+            i32 newY = state.cursorY - state.screenRows;
+            state.cursorY = clamp(newY, 0, state.nRows);
+            state.cursorX = clamp(state.cursorX, 0, state.rows[state.cursorY].size);
+        }; break;
+        case Key_Home: {
+            i32 newX = state.cursorX - state.screenCols;
+            state.cursorX = clamp(newX, 0, state.rows[state.cursorY].size);
+        } break;
+        case Key_End: {
+            i32 newX = state.cursorX + state.screenCols;
+            state.cursorX = clamp(newX, 0, state.rows[state.cursorY].size);
         } break;
         }
 
