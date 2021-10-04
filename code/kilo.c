@@ -204,7 +204,7 @@ main(i32 argc, char* argv[]) {
     struct AppendBuffer appendBuffer = {};
 
     for (;;) {
-        // NOTE(sen) Scroll
+        // NOTE(sen) Adjust offsets (scroll)
         {
             // NOTE(sen) Vertical
             assert(state.cursorY >= 0);
@@ -224,7 +224,7 @@ main(i32 argc, char* argv[]) {
             }
         }
 
-        // NOTE(sen) Refresh screen
+        // NOTE(sen) Render
         {
             abAppend(&appendBuffer, "\x1b[?25l", 6); // NOTE(sen) Hide cursor
             abAppend(&appendBuffer, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
@@ -277,12 +277,12 @@ main(i32 argc, char* argv[]) {
             write(STDOUT_FILENO, appendBuffer.buf, appendBuffer.len);
 
             abReset(&appendBuffer);
-        }
+        } // NOTE(sen) Render
 
-        // NOTE(sen) Process key press
+        // NOTE(sen) Get input
+        i32 key = 0;
         {
             // NOTE(sen) Read the first character input
-            i32 key = 0;
             {
                 i32 nread;
                 char ch;
@@ -319,37 +319,43 @@ main(i32 argc, char* argv[]) {
                     }
                 }
             }
+        }
 
-            // NOTE(sen) Respond to the key
+        // NOTE(sen) Respond to input
+        switch (key) {
+
+            // NOTE(sen) Quit
+        case CTRL_KEY('q'): {
+            write(STDOUT_FILENO, "\x1b[2J", 4); // NOTE(sen) Clear screen
+            write(STDOUT_FILENO, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
+            exit(0);
+        } break;
+
+            // NOTE(sen) Cursor move
+        case Key_ArrowUp: case Key_ArrowDown: case Key_ArrowLeft: case Key_ArrowRight: editorMoveCursor(&state, key); break;
+        case Key_PageUp: case Key_PageDown: case Key_Home: case Key_End: {
+            i32 arrow;
             switch (key) {
-            case CTRL_KEY('q'): {
-                write(STDOUT_FILENO, "\x1b[2J", 4); // NOTE(sen) Clear screen
-                write(STDOUT_FILENO, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
-                exit(0);
-            } break;
-            case Key_ArrowUp: case Key_ArrowDown: case Key_ArrowLeft: case Key_ArrowRight: editorMoveCursor(&state, key); break;
-            case Key_PageUp: case Key_PageDown: case Key_Home: case Key_End: {
-                i32 arrow;
-                switch (key) {
-                case Key_PageUp: arrow = Key_ArrowUp; break;
-                case Key_PageDown: arrow = Key_ArrowDown; break;
-                case Key_Home: arrow = Key_ArrowLeft; break;
-                case Key_End: arrow = Key_ArrowRight; break;
+            case Key_PageUp: arrow = Key_ArrowUp; break;
+            case Key_PageDown: arrow = Key_ArrowDown; break;
+            case Key_Home: arrow = Key_ArrowLeft; break;
+            case Key_End: arrow = Key_ArrowRight; break;
+            }
+            i32 times = 0;
+            switch (key) {
+            case Key_PageUp: case Key_PageDown: times = state.screenRows; break;
+            case Key_Home: case Key_End: {
+                if (state.cursorY < state.nRows) {
+                    Row* row = state.rows + state.cursorY;
+                    times = row->size;
                 }
-                i32 times = 0;
-                switch (key) {
-                case Key_PageUp: case Key_PageDown: times = state.screenRows; break;
-                case Key_Home: case Key_End: {
-                    if (state.cursorY < state.nRows) {
-                        Row* row = state.rows + state.cursorY;
-                        times = row->size;
-                    }
-                } break;
-                }
-                while (times--) { editorMoveCursor(&state, arrow); }
             } break;
             }
+            while (times--) { editorMoveCursor(&state, arrow); }
+        } break;
         }
-    }
+
+    } // NOTE(sen) Mainloop
+
     return 0;
 }
