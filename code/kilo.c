@@ -93,7 +93,8 @@ abReset(AppendBuffer* ab) {
     ab->len = 0;
 }
 
-i32 clamp(i32 value, i32 min, i32 max) {
+function i32
+clamp(i32 value, i32 min, i32 max) {
     i32 result = value;
     if (value < min) {
         result = min;
