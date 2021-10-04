@@ -33,12 +33,15 @@ global char* KILO_VERSION = "0.0.1";
 global struct termios OG_TERMINAL_SETTINGS;
 
 typedef struct Row {
-    i32 size;
-    char* chars;
+    i32 charsSize;
+    char* fileChars;
+    i32 renderSize;
+    char* renderChars;
 } Row;
 
 typedef struct EditorState {
-    i32 cursorX;
+    i32 cursorFileX;
+    i32 cursorRenderX;
     i32 cursorY;
     i32 screenRows;
     i32 screenCols;
@@ -171,6 +174,9 @@ main(i32 argc, char* argv[]) {
     }
 
     // NOTE(sen) Read file
+    char tabChar = '\t';
+    char tabReplacement = ' ';
+    i32 replacementPerTab = 8;
     if (argc > 1) {
         FILE* file = fopen(argv[1], "r");
         if (!file) { die("fopen"); }
@@ -182,13 +188,36 @@ main(i32 argc, char* argv[]) {
             while (linelen > 0 && (line[linelen - 1] == '\n' || line[linelen - 1] == '\r')) {
                 --linelen;
             }
+            // NOTE(sen) Add a row
             i32 rowIndex = state.nRows++;
             state.rows = realloc(state.rows, state.nRows * sizeof(Row));
             Row* row = state.rows + rowIndex;
-            row->size = linelen;
-            row->chars = malloc(linelen + 1);
-            memcpy(row->chars, line, linelen);
-            row->chars[linelen] = '\0';
+            // NOTE(sen) Copy the actual characters
+            row->charsSize = linelen;
+            row->fileChars = malloc(row->charsSize + 1);
+            memcpy(row->fileChars, line, row->charsSize);
+            row->fileChars[row->charsSize] = '\0';
+            // NOTE(sen) Construct the render characters
+            i32 nTabs = 0;
+            for (i32 charIndex = 0; charIndex < row->charsSize; charIndex++) {
+                if (row->fileChars[charIndex] == tabChar) {
+                    nTabs++;
+                }
+            }
+            row->renderSize = row->charsSize - nTabs + nTabs * replacementPerTab;
+            row->renderChars = malloc(row->renderSize + 1);
+            i32 renderIndex = 0;
+            for (i32 charIndex = 0; charIndex < row->charsSize; charIndex++) {
+                char rowChar = row->fileChars[charIndex];
+                if (rowChar == tabChar) {
+                    for (i32 spaceIndex = 0; spaceIndex < replacementPerTab; ++spaceIndex) {
+                        row->renderChars[renderIndex++] = tabReplacement;
+                    }
+                } else {
+                    row->renderChars[renderIndex++] = row->fileChars[charIndex];
+                }
+            }
+            assert(renderIndex == row->renderSize);
         }
         free(line);
         fclose(file);
@@ -208,12 +237,12 @@ main(i32 argc, char* argv[]) {
                 state.rowOffset = state.cursorY - state.screenRows + 1;
             }
             // NOTE(sen) Horizontal
-            assert(state.cursorX >= 0);
+            assert(state.cursorRenderX >= 0);
             assert(state.colOffset >= 0);
-            if (state.cursorX < state.colOffset) {
-                state.colOffset = state.cursorX;
-            } else if (state.cursorX >= state.colOffset + state.screenCols) {
-                state.colOffset = state.cursorX - state.screenCols + 1;
+            if (state.cursorRenderX < state.colOffset) {
+                state.colOffset = state.cursorRenderX;
+            } else if (state.cursorRenderX >= state.colOffset + state.screenCols) {
+                state.colOffset = state.cursorRenderX - state.screenCols + 1;
             }
         }
 
@@ -228,12 +257,12 @@ main(i32 argc, char* argv[]) {
                 if (fileRowIndex < state.nRows) {
                     // NOTE(sen) Print file rows
                     Row* row = state.rows + fileRowIndex;
-                    if (row->size > state.colOffset) {
-                        i32 len = row->size - state.colOffset;
+                    if (row->renderSize > state.colOffset) {
+                        i32 len = row->renderSize - state.colOffset;
                         if (len > state.screenCols) {
                             len = state.screenCols;
                         }
-                        abAppend(&appendBuffer, row->chars + state.colOffset, len);
+                        abAppend(&appendBuffer, row->renderChars + state.colOffset, len);
                     }
                 } else if (rowIndex == state.screenRows / 3 && state.nRows == 0) {
                     // NOTE(sen) Welcome message
@@ -262,7 +291,7 @@ main(i32 argc, char* argv[]) {
 
             // NOTE(sen) Move cursor to the appropriate position
             char buf[32];
-            snprintf(buf, sizeof(buf), "\x1b[%d;%dH", state.cursorY - state.rowOffset + 1, state.cursorX - state.colOffset + 1);
+            snprintf(buf, sizeof(buf), "\x1b[%d;%dH", state.cursorY - state.rowOffset + 1, state.cursorRenderX - state.colOffset + 1);
             abAppend(&appendBuffer, buf, strlen(buf));
 
             abAppend(&appendBuffer, "\x1b[?25h", 6); // NOTE(sen) Show cursor
@@ -329,55 +358,75 @@ main(i32 argc, char* argv[]) {
             if (state.cursorY < state.nRows) {
                 state.cursorY++;
                 if (state.cursorY == state.nRows) {
-                    state.cursorX = 0;
+                    state.cursorRenderX = 0;
+                    state.cursorFileX = 0;
                 } else {
-                    state.cursorX = clamp(state.cursorX, 0, state.rows[state.cursorY].size);
+                    state.cursorRenderX = clamp(state.cursorRenderX, 0, state.rows[state.cursorY].renderSize);
+                    state.cursorFileX = clamp(state.cursorFileX, 0, state.rows[state.cursorY].charsSize);
                 }
             }
         }; break;
         case Key_ArrowUp: {
             if (state.cursorY > 0) {
                 state.cursorY--;
-                state.cursorX = clamp(state.cursorX, 0, state.rows[state.cursorY].size);
+                state.cursorRenderX = clamp(state.cursorRenderX, 0, state.rows[state.cursorY].renderSize);
+                state.cursorFileX = clamp(state.cursorFileX, 0, state.rows[state.cursorY].charsSize);
             }
         }; break;
         case Key_ArrowRight: {
             if (state.cursorY < state.nRows) {
-                if (state.cursorX == state.rows[state.cursorY].size) {
-                    state.cursorX = 0;
+                if (state.cursorFileX == state.rows[state.cursorY].charsSize) {
+                    state.cursorFileX = 0;
+                    state.cursorRenderX = 0;
                     state.cursorY++;
                 } else {
-                    state.cursorX++;
+                    if (state.rows[state.cursorY].fileChars[state.cursorFileX] == tabChar) {
+                        state.cursorRenderX += replacementPerTab;
+                    } else {
+                        state.cursorRenderX++;
+                    }
+                    state.cursorFileX++;
                 }
             }
         }; break;
         case Key_ArrowLeft: {
-            if (state.cursorX == 0) {
+            if (state.cursorFileX == 0) {
                 if (state.cursorY > 0) {
                     state.cursorY--;
-                    state.cursorX = state.rows[state.cursorY].size;
+                    state.cursorFileX = state.rows[state.cursorY].charsSize;
+                    state.cursorRenderX = state.rows[state.cursorY].renderSize;
                 }
             } else {
-                state.cursorX--;
+                if (state.rows[state.cursorY].fileChars[state.cursorFileX - 1] == tabChar) {
+                    state.cursorRenderX -= replacementPerTab;
+                } else {
+                    state.cursorRenderX--;
+                }
+                state.cursorFileX--;
             }
         }; break;
         case Key_PageDown: {
             i32 newY = state.cursorY + state.screenRows;
             state.cursorY = clamp(newY, 0, state.nRows);
-            state.cursorX = clamp(state.cursorX, 0, state.rows[state.cursorY].size);
+            state.cursorRenderX = clamp(state.cursorRenderX, 0, state.rows[state.cursorY].renderSize);
+            state.cursorFileX = clamp(state.cursorFileX, 0, state.rows[state.cursorY].charsSize);
         }; break;
         case Key_PageUp: {
             i32 newY = state.cursorY - state.screenRows;
             state.cursorY = clamp(newY, 0, state.nRows);
-            state.cursorX = clamp(state.cursorX, 0, state.rows[state.cursorY].size);
+            state.cursorRenderX = clamp(state.cursorRenderX, 0, state.rows[state.cursorY].renderSize);
+            state.cursorFileX = clamp(state.cursorFileX, 0, state.rows[state.cursorY].charsSize);
         }; break;
         case Key_Home: {
-            i32 newX = state.cursorX - state.screenCols;
-            state.cursorX = clamp(newX, 0, state.rows[state.cursorY].size);
+            state.cursorFileX = 0;
+            state.cursorRenderX = 0;
         } break;
         case Key_End: {
-            i32 newX = state.cursorX + state.screenCols;
-            state.cursorX = clamp(newX, 0, state.rows[state.cursorY].size);
+            if (state.cursorY < state.nRows) {
+                Row* row = state.rows + state.cursorY;
+                state.cursorFileX = row->charsSize;
+                state.cursorRenderX = row->renderSize;
+            }
         } break;
         }
 
