@@ -110,11 +110,14 @@ makeCursorXValidAfterRowChange(EditorState* state, char tabChar, i32 replacement
     if (state->cursorY < state->nRows) {
         i32 renderIndex = 0;
         Row* row = state->rows + state->cursorY;
-        for (i32 charIndex = 0; charIndex < row->charsSize; charIndex++) {
+        for (i32 charIndex = 0; charIndex <= row->charsSize; charIndex++) {
             if (abs(state->cursorRenderX - renderIndex) <= abs(state->cursorRenderX - closestValidRenderOffset)) {
                 closestValidRenderOffset = renderIndex;
                 closestValidFileOffset = charIndex;
             } else {
+                break;
+            }
+            if (charIndex == row->charsSize) {
                 break;
             }
             if (row->fileChars[charIndex] == tabChar) {
