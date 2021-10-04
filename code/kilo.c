@@ -104,6 +104,31 @@ i32 clamp(i32 value, i32 min, i32 max) {
 }
 
 function void
+makeCursorXValidAfterRowChange(EditorState* state, char tabChar, i32 replacementsPerTab) {
+    i32 closestValidRenderOffset = 0;
+    i32 closestValidFileOffset = 0;
+    if (state->cursorY < state->nRows) {
+        i32 renderIndex = 0;
+        Row* row = state->rows + state->cursorY;
+        for (i32 charIndex = 0; charIndex < row->charsSize; charIndex++) {
+            if (abs(state->cursorRenderX - renderIndex) <= abs(state->cursorRenderX - closestValidRenderOffset)) {
+                closestValidRenderOffset = renderIndex;
+                closestValidFileOffset = charIndex;
+            } else {
+                break;
+            }
+            if (row->fileChars[charIndex] == tabChar) {
+                renderIndex += replacementsPerTab;
+            } else {
+                renderIndex++;
+            }
+        }
+    }
+    state->cursorRenderX = closestValidRenderOffset;
+    state->cursorFileX = closestValidFileOffset;
+}
+
+function void
 restoreOriginalTerminalSettings() {
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &OG_TERMINAL_SETTINGS)) {
         die("tcsetattr");
@@ -176,7 +201,7 @@ main(i32 argc, char* argv[]) {
     // NOTE(sen) Read file
     char tabChar = '\t';
     char tabReplacement = ' ';
-    i32 replacementPerTab = 8;
+    i32 replacementsPerTab = 8;
     if (argc > 1) {
         FILE* file = fopen(argv[1], "r");
         if (!file) { die("fopen"); }
@@ -204,13 +229,13 @@ main(i32 argc, char* argv[]) {
                     nTabs++;
                 }
             }
-            row->renderSize = row->charsSize - nTabs + nTabs * replacementPerTab;
+            row->renderSize = row->charsSize - nTabs + nTabs * replacementsPerTab;
             row->renderChars = malloc(row->renderSize + 1);
             i32 renderIndex = 0;
             for (i32 charIndex = 0; charIndex < row->charsSize; charIndex++) {
                 char rowChar = row->fileChars[charIndex];
                 if (rowChar == tabChar) {
-                    for (i32 spaceIndex = 0; spaceIndex < replacementPerTab; ++spaceIndex) {
+                    for (i32 spaceIndex = 0; spaceIndex < replacementsPerTab; ++spaceIndex) {
                         row->renderChars[renderIndex++] = tabReplacement;
                     }
                 } else {
@@ -361,16 +386,14 @@ main(i32 argc, char* argv[]) {
                     state.cursorRenderX = 0;
                     state.cursorFileX = 0;
                 } else {
-                    state.cursorRenderX = clamp(state.cursorRenderX, 0, state.rows[state.cursorY].renderSize);
-                    state.cursorFileX = clamp(state.cursorFileX, 0, state.rows[state.cursorY].charsSize);
+                    makeCursorXValidAfterRowChange(&state, tabChar, replacementsPerTab);
                 }
             }
         }; break;
         case Key_ArrowUp: {
             if (state.cursorY > 0) {
                 state.cursorY--;
-                state.cursorRenderX = clamp(state.cursorRenderX, 0, state.rows[state.cursorY].renderSize);
-                state.cursorFileX = clamp(state.cursorFileX, 0, state.rows[state.cursorY].charsSize);
+                makeCursorXValidAfterRowChange(&state, tabChar, replacementsPerTab);
             }
         }; break;
         case Key_ArrowRight: {
@@ -381,7 +404,7 @@ main(i32 argc, char* argv[]) {
                     state.cursorY++;
                 } else {
                     if (state.rows[state.cursorY].fileChars[state.cursorFileX] == tabChar) {
-                        state.cursorRenderX += replacementPerTab;
+                        state.cursorRenderX += replacementsPerTab;
                     } else {
                         state.cursorRenderX++;
                     }
@@ -398,7 +421,7 @@ main(i32 argc, char* argv[]) {
                 }
             } else {
                 if (state.rows[state.cursorY].fileChars[state.cursorFileX - 1] == tabChar) {
-                    state.cursorRenderX -= replacementPerTab;
+                    state.cursorRenderX -= replacementsPerTab;
                 } else {
                     state.cursorRenderX--;
                 }
@@ -408,14 +431,12 @@ main(i32 argc, char* argv[]) {
         case Key_PageDown: {
             i32 newY = state.cursorY + state.screenRows;
             state.cursorY = clamp(newY, 0, state.nRows);
-            state.cursorRenderX = clamp(state.cursorRenderX, 0, state.rows[state.cursorY].renderSize);
-            state.cursorFileX = clamp(state.cursorFileX, 0, state.rows[state.cursorY].charsSize);
+            makeCursorXValidAfterRowChange(&state, tabChar, replacementsPerTab);
         }; break;
         case Key_PageUp: {
             i32 newY = state.cursorY - state.screenRows;
             state.cursorY = clamp(newY, 0, state.nRows);
-            state.cursorRenderX = clamp(state.cursorRenderX, 0, state.rows[state.cursorY].renderSize);
-            state.cursorFileX = clamp(state.cursorFileX, 0, state.rows[state.cursorY].charsSize);
+            makeCursorXValidAfterRowChange(&state, tabChar, replacementsPerTab);
         }; break;
         case Key_Home: {
             state.cursorFileX = 0;
