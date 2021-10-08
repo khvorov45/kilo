@@ -200,7 +200,7 @@ main(i32 argc, char* argv[]) {
         if (!success) {
             die("failed to get window size");
         }
-        // NOTE(sen) Make room for the status bar
+        // NOTE(sen) Make room for the status bar and user message
         state.screenRows -= 1;
     }
 
@@ -317,9 +317,9 @@ main(i32 argc, char* argv[]) {
                 abAppend(&appendBuffer, "\x1b[K", 3);
 
                 // NOTE(sen) Make sure there is no newline on the last line
-                if (rowIndex < state.screenRows - 1) {
-                    abAppend(&appendBuffer, "\r\n", 2);
-                }
+                //if (rowIndex < state.screenRows - 1) {
+                abAppend(&appendBuffer, "\r\n", 2);
+                //}
             }
 
             // NOTE(sen) Draw status bar
@@ -337,6 +337,28 @@ main(i32 argc, char* argv[]) {
             abAppend(&appendBuffer, "\x1b[1m", 4); // NOTE(sen) Bold
             abAppend(&appendBuffer, status, statusLen);
             abAppend(&appendBuffer, "\x1b[m", 3); // NOTE(sen) Reset formatting
+
+            abAppend(&appendBuffer, "\r\n", 2);
+
+            // NOTE(sen) Draw user message
+            char message[80];
+            i32 messageLen = snprintf(message, sizeof(message), "HELP: Ctrl-Q = quit");
+            if (messageLen > state.screenCols) {
+                messageLen = state.screenCols;
+            }
+            i32 messagePadTotal = state.screenCols - messageLen;
+            i32 messagePadSide = messagePadTotal / 2;
+            i32 messagePad = messagePadSide;
+            while (messagePad > 0) {
+                abAppend(&appendBuffer, " ", 1);
+                messagePad--;
+            }
+            abAppend(&appendBuffer, message, messageLen);
+            messagePad = messagePadSide;
+            while (messagePad > 0) {
+                abAppend(&appendBuffer, " ", 1);
+                messagePad--;
+            }
 
             // NOTE(sen) Move cursor to the appropriate position
             char buf[32];
