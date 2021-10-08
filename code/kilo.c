@@ -173,7 +173,6 @@ addRow(EditorState* state) {
     i32 rowIndex = state->nRows++;
     state->rows = realloc(state->rows, state->nRows * sizeof(Row));
     Row* row = state->rows + rowIndex;
-    row->charsSize = 123;
     memset(row, 0, sizeof(Row));
     return row;
 }
@@ -343,9 +342,7 @@ main(i32 argc, char* argv[]) {
                 abAppend(&appendBuffer, "\x1b[K", 3);
 
                 // NOTE(sen) Make sure there is no newline on the last line
-                //if (rowIndex < state.screenRows - 1) {
                 abAppend(&appendBuffer, "\r\n", 2);
-                //}
             }
 
             // NOTE(sen) Draw status bar
@@ -355,7 +352,6 @@ main(i32 argc, char* argv[]) {
                 statusLen = state.screenCols;
             }
             i32 statusPad = state.screenCols - statusLen;
-            // statusPad = 20;
             while (statusPad > 0) {
                 abAppend(&appendBuffer, " ", 1);
                 statusPad--;
