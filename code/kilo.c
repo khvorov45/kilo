@@ -174,6 +174,16 @@ constructRenderChars(char** render, i32* renderLen, char* file, i32 fileLen, cha
     assert(renderIndex == *renderLen);
 }
 
+function Row*
+addRow(EditorState* state) {
+    i32 rowIndex = state->nRows++;
+    state->rows = realloc(state->rows, state->nRows * sizeof(Row));
+    Row* row = state->rows + rowIndex;
+    row->charsSize = 123;
+    memset(row, 0, sizeof(Row));
+    return row;
+}
+
 i32
 main(i32 argc, char* argv[]) {
     // NOTE(sen) Save the original settings
@@ -255,10 +265,7 @@ main(i32 argc, char* argv[]) {
             while (linelen > 0 && (line[linelen - 1] == '\n' || line[linelen - 1] == '\r')) {
                 --linelen;
             }
-            // NOTE(sen) Add a row
-            i32 rowIndex = state.nRows++;
-            state.rows = realloc(state.rows, state.nRows * sizeof(Row));
-            Row* row = state.rows + rowIndex;
+            Row* row = addRow(&state);
             // NOTE(sen) Copy the actual characters
             row->charsSize = linelen;
             row->fileChars = malloc(row->charsSize + 1);
@@ -510,18 +517,21 @@ main(i32 argc, char* argv[]) {
             }
         } break;
         default: {
-            if (state.cursorY < state.nRows) {
-                char newFileChar = (char)key;
-                char* newRenderChars = 0;
-                i32 newRenderCharsLen = 0;
-                constructRenderChars(&newRenderChars, &newRenderCharsLen, &newFileChar, 1, tabChar, replacementsPerTab);
+            Row* row;
+            if (state.cursorY == state.nRows) {
+                row = addRow(&state);
+            } else {
                 Row* row = state.rows + state.cursorY;
-                insert(&row->fileChars, &row->charsSize, &newFileChar, 1, state.cursorFileX);
-                insert(&row->renderChars, &row->renderSize, newRenderChars, newRenderCharsLen, state.cursorRenderX);
-                free(newRenderChars);
-                state.cursorRenderX += newRenderCharsLen;
-                state.cursorFileX++;
             }
+            char newFileChar = (char)key;
+            char* newRenderChars = 0;
+            i32 newRenderCharsLen = 0;
+            constructRenderChars(&newRenderChars, &newRenderCharsLen, &newFileChar, 1, tabChar, replacementsPerTab);
+            insert(&row->fileChars, &row->charsSize, &newFileChar, 1, state.cursorFileX);
+            insert(&row->renderChars, &row->renderSize, newRenderChars, newRenderCharsLen, state.cursorRenderX);
+            free(newRenderChars);
+            state.cursorRenderX += newRenderCharsLen;
+            state.cursorFileX++;
         }
         } // NOTE(sen) switch(key)
 
