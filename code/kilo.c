@@ -134,13 +134,6 @@ makeCursorXValidAfterRowChange(EditorState* state, char tabChar, i32 replacement
 }
 
 function void
-restoreOriginalTerminalSettings() {
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &OG_TERMINAL_SETTINGS)) {
-        die("tcsetattr");
-    }
-}
-
-function void
 insert(char** string, i32* stringLen, char* insertion, i32 insertionLen, i32 offset) {
     if (offset <= *stringLen) {
         *string = realloc(*string, *stringLen + insertionLen + 1);
@@ -183,6 +176,13 @@ addRow(EditorState* state) {
     row->charsSize = 123;
     memset(row, 0, sizeof(Row));
     return row;
+}
+
+function void
+restoreOriginalTerminalSettings() {
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &OG_TERMINAL_SETTINGS)) {
+        die("tcsetattr");
+    }
 }
 
 i32

@@ -9,7 +9,7 @@
       "type": "lldb",
       "request": "launch",
       "program": "${workspaceFolder}/build/kilo",
-      "args": ["test-input/test-input.txt"]
+      "args": ["test-input/short.txt"]
     }
   ]
 }
