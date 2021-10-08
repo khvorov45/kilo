@@ -1,4 +1,4 @@
-// https://www.gnu.org/software/libc/manual/html_node/Feature-Test-Macros.html
+dasdad// https://www.gnu.org/software/libc/manual/html_node/Feature-Test-Macros.html
 #define _DEFAULT_SOURCE
 #define _BSD_SOURCE
 #define _GNU_SOURCE
@@ -6,9 +6,9 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
+#inclufdsfde <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
+asdfsdf#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -187,10 +187,6 @@ addRow(EditorState* state) {
 
 i32
 main(i32 argc, char* argv[]) {
-    if (argc < 2) {
-        die("provide a filename");
-    }
-
     // NOTE(sen) Save the original settings
     if (tcgetattr(STDIN_FILENO, &OG_TERMINAL_SETTINGS)) {
         die("tcgetattr");
@@ -258,7 +254,7 @@ main(i32 argc, char* argv[]) {
     char* filename = '\0';
     char tabChar = '\t';
     i32 replacementsPerTab = 8;
-    {
+    if (argc > 1) {
         filename = argv[1];
         FILE* file = fopen(filename, "r");
         if (!file) { die("fopen"); }
@@ -528,15 +524,7 @@ main(i32 argc, char* argv[]) {
         case CTRL_KEY('h'): {} break;
         case CTRL_KEY('l'): {} break;
         case CTRL_KEY('s'): {
-            for (i32 rowIndex = 0; rowIndex < state.nRows; rowIndex++) {
-                Row* row = state.rows + rowIndex;
-                abAppend(&appendBuffer, row->fileChars, row->charsSize);
-                abAppend(&appendBuffer, "\n", 1);
-            }
-            FILE* file = fopen(filename, "w");
-            fwrite(appendBuffer.buf, appendBuffer.len, 1, file);
-            fclose(file);
-            abReset(&appendBuffer);
+
         } break;
         default: {
             // NOTE(sen) Insert into text
