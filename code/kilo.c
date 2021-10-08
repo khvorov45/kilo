@@ -200,14 +200,18 @@ main(i32 argc, char* argv[]) {
         if (!success) {
             die("failed to get window size");
         }
+        // NOTE(sen) Make room for the status bar
+        state.screenRows -= 1;
     }
 
     // NOTE(sen) Read file
     char tabChar = '\t';
     char tabReplacement = ' ';
     i32 replacementsPerTab = 8;
+    char* filename = '\0';
     if (argc > 1) {
-        FILE* file = fopen(argv[1], "r");
+        filename = argv[1];
+        FILE* file = fopen(filename, "r");
         if (!file) { die("fopen"); }
         char* line = 0;
         usize linecap = 0;
@@ -317,6 +321,22 @@ main(i32 argc, char* argv[]) {
                     abAppend(&appendBuffer, "\r\n", 2);
                 }
             }
+
+            // NOTE(sen) Draw status bar
+            char status[80];
+            i32 statusLen = snprintf(status, sizeof(status), "%.20s - %d lines", filename, state.nRows);
+            if (statusLen > state.screenCols) {
+                statusLen = state.screenCols;
+            }
+            i32 statusPad = state.screenCols - statusLen;
+            // statusPad = 20;
+            while (statusPad > 0) {
+                abAppend(&appendBuffer, " ", 1);
+                statusPad--;
+            }
+            abAppend(&appendBuffer, "\x1b[1m", 4); // NOTE(sen) Bold
+            abAppend(&appendBuffer, status, statusLen);
+            abAppend(&appendBuffer, "\x1b[m", 3); // NOTE(sen) Reset formatting
 
             // NOTE(sen) Move cursor to the appropriate position
             char buf[32];
