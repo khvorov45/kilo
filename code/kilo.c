@@ -57,6 +57,7 @@ typedef struct AppendBuffer {
 } AppendBuffer;
 
 enum EditorKey {
+    Key_Backspace = 127,
     Key_ArrowLeft = 1000,
     Key_ArrowRight,
     Key_ArrowUp,
@@ -516,12 +517,19 @@ main(i32 argc, char* argv[]) {
                 state.cursorRenderX = row->renderSize;
             }
         } break;
+        case '\r': {} break;
+        case '\x1b': {} break;
+        case Key_Backspace: {} break;
+        case Key_Delete: {} break;
+        case CTRL_KEY('h'): {} break;
+        case CTRL_KEY('l'): {} break;
         default: {
+            // NOTE(sen) Insert into text
             Row* row;
             if (state.cursorY == state.nRows) {
                 row = addRow(&state);
             } else {
-                Row* row = state.rows + state.cursorY;
+                row = state.rows + state.cursorY;
             }
             char newFileChar = (char)key;
             char* newRenderChars = 0;
