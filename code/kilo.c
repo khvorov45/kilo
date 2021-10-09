@@ -43,7 +43,10 @@ typedef struct Row {
 } Row;
 
 typedef struct EditorState {
+    i32 userMessageLen;
+    char userMessage[128];
     b32 dirty;
+    b32 aboutToQuit;
     i32 cursorFileX;
     i32 cursorRenderX;
     i32 cursorY;
@@ -221,6 +224,10 @@ main(i32 argc, char* argv[]) {
 
     EditorState state = {};
 
+    // NOTE(sen) Set default message
+    state.userMessageLen =
+        snprintf(state.userMessage, sizeof(state.userMessage), "HELP: Ctrl-Q = quit");
+
     // NOTE(sen) Figure out window size
     {
         struct winsize ws;
@@ -367,8 +374,7 @@ main(i32 argc, char* argv[]) {
             abAppend(&appendBuffer, "\r\n", 2);
 
             // NOTE(sen) Draw user message
-            char message[80];
-            i32 messageLen = snprintf(message, sizeof(message), "HELP: Ctrl-Q = quit");
+            i32 messageLen = state.userMessageLen;
             if (messageLen > state.screenCols) {
                 messageLen = state.screenCols;
             }
@@ -379,7 +385,7 @@ main(i32 argc, char* argv[]) {
                 abAppend(&appendBuffer, " ", 1);
                 messagePad--;
             }
-            abAppend(&appendBuffer, message, messageLen);
+            abAppend(&appendBuffer, state.userMessage, messageLen);
             messagePad = messagePadSide;
             while (messagePad > 0) {
                 abAppend(&appendBuffer, " ", 1);
@@ -440,18 +446,26 @@ main(i32 argc, char* argv[]) {
             }
         }
 
-        // NOTE(sen) Respond to input
+        // NOTE(sen) Handle quit
+        if (key == CTRL_KEY('q')) {
+            if (state.aboutToQuit || !state.dirty) {
+                write(STDOUT_FILENO, "\x1b[2J", 4); // NOTE(sen) Clear screen
+                write(STDOUT_FILENO, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
+                exit(0);
+            } else {
+                state.aboutToQuit = true;
+                state.userMessageLen =
+                    snprintf(state.userMessage, sizeof(state.userMessage), "Changes will be lost, press Ctrl-Q again to quit");
+            }
+        } else {
+            state.aboutToQuit = false;
+        }
+
+        // NOTE(sen) Handle all other input
         switch (key) {
-
-            // NOTE(sen) Quit
-        case CTRL_KEY('q'): {
-            write(STDOUT_FILENO, "\x1b[2J", 4); // NOTE(sen) Clear screen
-            write(STDOUT_FILENO, "\x1b[H", 3); // NOTE(sen) Move cursor to top-left
-            exit(0);
-        } break;
-
             // NOTE(sen) Cursor move
         case Key_ArrowDown: {
+            state.aboutToQuit = false;
             if (state.cursorY < state.nRows) {
                 state.cursorY++;
                 if (state.cursorY == state.nRows) {
@@ -463,12 +477,14 @@ main(i32 argc, char* argv[]) {
             }
         }; break;
         case Key_ArrowUp: {
+            state.aboutToQuit = false;
             if (state.cursorY > 0) {
                 state.cursorY--;
                 makeCursorXValidAfterRowChange(&state, tabChar, replacementsPerTab);
             }
         }; break;
         case Key_ArrowRight: {
+            state.aboutToQuit = false;
             if (state.cursorY < state.nRows) {
                 if (state.cursorFileX == state.rows[state.cursorY].charsSize) {
                     state.cursorFileX = 0;
@@ -521,6 +537,8 @@ main(i32 argc, char* argv[]) {
                 state.cursorRenderX = row->renderSize;
             }
         } break;
+
+            // NOTE(sen) Control characters
         case '\r': {} break;
         case '\x1b': {} break;
         case Key_Backspace: {} break;
@@ -539,6 +557,7 @@ main(i32 argc, char* argv[]) {
             abReset(&appendBuffer);
             state.dirty = false;
         } break;
+
         default: {
             // NOTE(sen) Insert into text
             state.dirty = true;
