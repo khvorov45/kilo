@@ -541,7 +541,45 @@ main(i32 argc, char* argv[]) {
             // NOTE(sen) Control characters
         case '\r': {} break;
         case '\x1b': {} break;
-        case Key_Backspace: {} break;
+        case Key_Backspace: {
+            state.dirty = true;
+            if (state.cursorY < state.nRows) {
+                Row* row = state.rows + state.cursorY;
+                i32 fileDeleteLen = 1;
+                if (state.cursorFileX >= fileDeleteLen) {
+                    char* fileSource = row->fileChars + state.cursorFileX;
+                    char* renderSource = row->renderChars + state.cursorRenderX;
+
+                    char* toDelete = row->fileChars + (state.cursorFileX - fileDeleteLen);
+                    i32 renderDeleteLen = 0;
+
+                    for (i32 deleteCharIndex = 0; deleteCharIndex < fileDeleteLen; deleteCharIndex++) {
+                        char deleteChar = toDelete[deleteCharIndex];
+                        if (deleteChar == tabChar) {
+                            renderDeleteLen += replacementsPerTab;
+                        } else {
+                            renderDeleteLen += 1;
+                        }
+                    }
+                    assert(state.cursorRenderX >= renderDeleteLen);
+
+                    char* fileDest = row->fileChars + state.cursorFileX - fileDeleteLen;
+                    char* renderDest = row->renderChars + state.cursorRenderX - renderDeleteLen;
+
+                    i32 fileMoveLen = row->charsSize - state.cursorFileX + 1;
+                    i32 renderMoveLen = row->renderSize - state.cursorRenderX + 1;
+
+                    memmove(fileDest, fileSource, fileMoveLen);
+                    memmove(renderDest, renderSource, renderMoveLen);
+
+                    row->charsSize -= fileDeleteLen;
+                    state.cursorFileX -= fileDeleteLen;
+
+                    row->renderSize -= renderDeleteLen;
+                    state.cursorRenderX -= renderDeleteLen;
+                }
+            }
+        } break;
         case Key_Delete: {} break;
         case CTRL_KEY('h'): {} break;
         case CTRL_KEY('l'): {} break;
