@@ -577,6 +577,17 @@ main(i32 argc, char* argv[]) {
 
                     row->renderSize -= renderDeleteLen;
                     state.cursorRenderX -= renderDeleteLen;
+                } else if (state.cursorY > 0) {
+                    Row* prevRow = state.rows + state.cursorY - 1;
+                    state.cursorY -= 1;
+                    state.cursorFileX = prevRow->charsSize;
+                    state.cursorRenderX = prevRow->renderSize;
+                    insert(&prevRow->fileChars, &prevRow->charsSize, row->fileChars, row->charsSize, prevRow->charsSize);
+                    insert(&prevRow->renderChars, &prevRow->renderSize, row->renderChars, row->renderSize, prevRow->renderSize);
+                    free(row->fileChars);
+                    free(row->renderChars);
+                    memcpy(row, row + 1, (state.nRows - state.cursorY) * sizeof(Row));
+                    state.nRows -= 1;
                 }
             }
         } break;
