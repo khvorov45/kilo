@@ -21,6 +21,9 @@ typedef int32_t b32;
 typedef ssize_t isize;
 typedef size_t usize;
 
+#define true 1
+#define false 0
+
 #define function static
 #define global static
 
@@ -40,6 +43,7 @@ typedef struct Row {
 } Row;
 
 typedef struct EditorState {
+    b32 dirty;
     i32 cursorFileX;
     i32 cursorRenderX;
     i32 cursorY;
@@ -347,7 +351,7 @@ main(i32 argc, char* argv[]) {
 
             // NOTE(sen) Draw status bar
             char status[80];
-            i32 statusLen = snprintf(status, sizeof(status), "%.20s - %d lines", filename, state.nRows);
+            i32 statusLen = snprintf(status, sizeof(status), "%.20s%s - %d lines", filename, state.dirty ? "*" : "", state.nRows);
             if (statusLen > state.screenCols) {
                 statusLen = state.screenCols;
             }
@@ -533,9 +537,11 @@ main(i32 argc, char* argv[]) {
             fwrite(appendBuffer.buf, appendBuffer.len, 1, file);
             fclose(file);
             abReset(&appendBuffer);
+            state.dirty = false;
         } break;
         default: {
             // NOTE(sen) Insert into text
+            state.dirty = true;
             Row* row;
             if (state.cursorY == state.nRows) {
                 row = addRow(&state);
